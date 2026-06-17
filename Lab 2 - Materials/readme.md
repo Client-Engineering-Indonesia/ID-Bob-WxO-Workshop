@@ -95,7 +95,7 @@ Before starting the lab, you need to set up your watsonx Orchestrate credentials
 
 1. **Copy the environment template:**
    ```bash
-   cd "ID-Bob-WxO-Workshop/Lab 2 - Materials"
+   cd "Lab 2 - Materials"
    cp env.example .env
    ```
 
