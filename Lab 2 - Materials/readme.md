@@ -10,15 +10,14 @@ This system demonstrates how to build and deploy AI agents using watsonx Orchest
 
 ```
 Lab 2 - Materials/
-├── wxo-financial-agent/
-│   ├── agents/
-│   │   ├── yahoo-finance-agent.yaml      # Stock data agent (provided)
-│   │   ├── news-scraper-agent.yaml       # News sentiment agent (to build)
-│   │   └── main-orchestrator.yaml        # Main coordinator (to build)
-│   └── tools/
-│       ├── yahoo_finance.py              # Stock data tools (provided)
-│       └── news_scraper_tool.py          # News scraping tools (to build)
+├── agents/
+│   ├── yahoo-finance-agent.yaml          # Stock data agent (provided)
+│   └── news-scraper-agent.yaml           # News sentiment agent (to build)
+├── tools/
+│   ├── yahoo_finance.py                  # Stock data tools (provided)
+│   └── news_scraper_tool.py              # News scraping tools (to build)
 ├── requirements.txt                      # Python dependencies
+├── env.example                           # Environment configuration template
 ├── BOB_INSTRUCTIONS.md                   # Detailed technical guide
 └── readme.md                             # This file
 ```
@@ -70,7 +69,23 @@ graph TD
 
 - Python 3.11+
 - watsonx Orchestrate account (trial or subscription)
+- watsonx Orchestrate CLI installed
 - Internet access for API calls
+
+### Verify Prerequisites
+
+Before starting, verify your environment:
+
+```bash
+# Check Python version (should be 3.11+)
+python --version
+
+# Check if orchestrate CLI is installed
+orchestrate --version
+
+# If orchestrate CLI is not installed, install it:
+pip install ibm-watsonx-orchestrate-cli
+```
 
 ## Setup
 
@@ -94,23 +109,36 @@ Before starting the lab, you need to set up your watsonx Orchestrate credentials
    - **API Key**: Log in to watsonx Orchestrate → Settings → API Keys → Create new key
    - **Instance URL**: watsonx Orchestrate → Settings → Instance Details → Copy instance URL
 
-### Step 2: Install Dependencies
+### Step 2: Verify CLI Installation
+
+```bash
+# Verify orchestrate CLI is installed
+orchestrate --version
+
+# If not installed, install it:
+pip install ibm-watsonx-orchestrate-cli
+```
+
+### Step 3: Install Dependencies
 
 ```bash
 # Install Python dependencies
 pip install -r requirements.txt
 ```
 
-### Step 3: Configure watsonx Orchestrate CLI
+### Step 4: Configure watsonx Orchestrate CLI
 
 ```bash
-# Add your environment
+# Add your environment (use your actual instance URL)
 orchestrate env add -n production \
   -u https://api.us-south.watson-orchestrate.cloud.ibm.com/instances/YOUR_INSTANCE_ID \
   -a
 
 # Activate the environment
 orchestrate env activate production
+
+# Verify environment is active
+orchestrate env list
 ```
 
 **Note:** The `.env` file approach ensures your credentials are ready for all deployment commands and prevents authentication errors during implementation.
