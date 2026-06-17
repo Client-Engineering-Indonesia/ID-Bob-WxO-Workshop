@@ -40,12 +40,12 @@ Students have access to `yahoo-finance-agent.yaml` as a reference. This agent de
 The project structure is already set up:
 ```
 Lab 2 - Materials/
-├── wxo-financial-agent/
-│   ├── agents/
-│   │   └── yahoo-finance-agent.yaml (reference)
-│   └── tools/
-│       └── yahoo_finance.py (reference)
+├── agents/
+│   └── yahoo-finance-agent.yaml (reference)
+├── tools/
+│   └── yahoo_finance.py (reference)
 ├── requirements.txt (dependencies)
+├── env.example (environment template)
 └── BOB_INSTRUCTIONS.md (this file)
 ```
 
@@ -56,7 +56,7 @@ Lab 2 - Materials/
 ### Phase 2: Build Python Tool
 
 #### Step 2.1: Create News Scraper Tool
-**File:** `wxo-financial-agent/tools/news_scraper_tool.py`
+**File:** `tools/news_scraper_tool.py`
 
 **Key Requirements:**
 - Import: `from ibm_watsonx_orchestrate.agent_builder.tools import tool`
@@ -128,7 +128,7 @@ Review these key elements:
 5. **tools**: List of available functions
 
 #### Step 3.2: Create News Scraper Agent
-**File:** `wxo-financial-agent/agents/news-scraper-agent.yaml`
+**File:** `agents/news-scraper-agent.yaml`
 
 **Task:** Create this file based on the reference `yahoo-finance-agent.yaml` structure.
 
@@ -181,7 +181,7 @@ tools:
 #### Step 4.1: Setup Environment
 ```bash
 # Navigate to project directory
-cd "Lab 2 - Materials"
+cd "ID-Bob-WxO-Workshop/Lab 2 - Materials"
 
 # Set API key (if not already set)
 export WXO_API_KEY="your_api_key_here"
@@ -197,23 +197,22 @@ orchestrate env activate production
 
 #### Step 4.2: Import Tools with Dependencies
 ```bash
-cd wxo-financial-agent
-
 # Import Yahoo Finance tools (reference - already done)
 orchestrate tools import -k python \
   -f tools/yahoo_finance.py \
-  -r ../requirements.txt
+  -r requirements.txt
 
 # Import News Scraper tools
 orchestrate tools import -k python \
   -f tools/news_scraper_tool.py \
-  -r ../requirements.txt
+  -r requirements.txt
 ```
 
 **Critical Notes:**
-- MUST use `-r ../requirements.txt` flag
+- MUST use `-r requirements.txt` flag
 - This installs dependencies in cloud runtime
 - Wait for "Tool imported successfully" message
+- All commands run from "ID-Bob-WxO-Workshop/Lab 2 - Materials" directory
 
 #### Step 4.3: Import Agents
 ```bash
@@ -287,11 +286,11 @@ Tools:
 
 **Solution:**
 ```bash
-# Re-import tool with requirements file
-cd wxo-financial-agent
+# Re-import tool with requirements file from Lab 2 - Materials directory
+cd "ID-Bob-WxO-Workshop/Lab 2 - Materials"
 orchestrate tools import -k python \
   -f tools/news_scraper_tool.py \
-  -r ../requirements.txt
+  -r requirements.txt
 ```
 
 ### Issue 2: Ticker-Specific News Returns General News
@@ -329,17 +328,16 @@ Your implementation is complete when:
 
 ```bash
 # 1. Navigate to project
-cd "Lab 2 - Materials"
+cd "ID-Bob-WxO-Workshop/Lab 2 - Materials"
 
 # 2. Create News Scraper files
-# - wxo-financial-agent/tools/news_scraper_tool.py
-# - wxo-financial-agent/agents/news-scraper-agent.yaml
+# - tools/news_scraper_tool.py
+# - agents/news-scraper-agent.yaml
 
 # 3. Deploy
-cd wxo-financial-agent
 export WXO_API_KEY="your_key"
 orchestrate env activate production
-orchestrate tools import -k python -f tools/news_scraper_tool.py -r ../requirements.txt
+orchestrate tools import -k python -f tools/news_scraper_tool.py -r requirements.txt
 orchestrate agents import -f agents/news-scraper-agent.yaml
 
 # 4. Verify
@@ -365,7 +363,8 @@ orchestrate tools list
 
 ### 3. Deployment
 - Use requirements.txt (no IBM packages)
-- Import tools with `-r ../requirements.txt` flag for dependencies
+- Import tools with `-r requirements.txt` flag for dependencies
+- All commands run from "ID-Bob-WxO-Workshop/Lab 2 - Materials" directory
 - Verify each step before proceeding
 
 ### 4. Testing
