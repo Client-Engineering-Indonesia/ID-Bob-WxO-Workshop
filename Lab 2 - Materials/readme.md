@@ -1,4 +1,4 @@
-# watsonx.Orchestrate Financial Intelligence Agent System
+# Lab 2: watsonx.Orchestrate Financial Intelligence Agent System
 
 A multi-agent system for financial analysis built with IBM watsonx Orchestrate. Provides real-time stock market data and financial news sentiment analysis through specialized AI agents.
 
