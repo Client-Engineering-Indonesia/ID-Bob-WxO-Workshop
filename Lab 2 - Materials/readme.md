@@ -34,10 +34,10 @@ graph TD
     FO -->|Combined analysis| NSA
     
     YFA -->|Uses| YFT[yahoo_finance.py<br/>• get_formatted_stock_data<br/>• get_stock_comparison]
-    NSA -->|Uses| NST[news_scraper_tool.py<br/>• scrape_financial_news<br/>• scrape_reuters_news]
+    NSA -->|Uses| NST[news_scraper_tool.py<br/>• scrape_financial_news<br/>]
     
     YFT -->|Fetches from| YAPI[Yahoo Finance API]
-    NST -->|Scrapes from| NEWS[News Sources<br/>Yahoo Finance News<br/>Reuters]
+    NST -->|Scrapes from| NEWS[News Sources<br/>Yahoo Finance News<br/>]
     
     YFA -->|Returns| FO
     NSA -->|Returns| FO
