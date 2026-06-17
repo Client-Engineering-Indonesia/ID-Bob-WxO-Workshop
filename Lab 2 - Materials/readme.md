@@ -109,24 +109,14 @@ Before starting the lab, you need to set up your watsonx Orchestrate credentials
    - **API Key**: Log in to watsonx Orchestrate → Settings → API Keys → Create new key
    - **Instance URL**: watsonx Orchestrate → Settings → Instance Details → Copy instance URL
 
-### Step 2: Verify CLI Installation
-
-```bash
-# Verify orchestrate CLI is installed
-orchestrate --version
-
-# If not installed, install it:
-pip install ibm-watsonx-orchestrate-cli
-```
-
-### Step 3: Install Dependencies
+### Step 2: Install Dependencies
 
 ```bash
 # Install Python dependencies
 pip install -r requirements.txt
 ```
 
-### Step 4: Configure watsonx Orchestrate CLI
+### Step 3: Configure watsonx Orchestrate CLI
 
 ```bash
 # Add your environment (use your actual instance URL)
