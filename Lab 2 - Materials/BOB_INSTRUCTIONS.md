@@ -7,7 +7,7 @@ This document provides instructions for creating a watsonx Orchestrate agent tha
 
 ## Project Goal
 Build an AI agent on IBM watsonx Orchestrate that:
-1. Scrapes financial news from Yahoo Finance and Reuters
+1. Scrapes financial news from Yahoo Finance
 2. Performs VADER sentiment analysis
 3. Filters news by stock ticker
 4. Provides market sentiment insights
@@ -60,8 +60,8 @@ Lab 2 - Materials/
 
 **Key Requirements:**
 - Import: `from ibm_watsonx_orchestrate.agent_builder.tools import tool`
-- Use `@tool` decorator for each function
-- Function names: `scrape_financial_news`, `scrape_reuters_news`
+- Use `@tool` decorator for the function
+- Function name: `scrape_financial_news`
 - Implement VADER sentiment analysis
 - Handle ticker filtering intelligently
 
@@ -98,14 +98,11 @@ if ticker and ticker.upper() not in title.upper():
         continue  # Skip non-relevant articles
 ```
 
-**Reuters Error Handling:**
+**Error Handling:**
 ```python
-except requests.exceptions.HTTPError as e:
-    if e.response.status_code in [401, 403]:
-        return (
-            "Reuters Access Blocked\n"
-            "Alternative: Use scrape_financial_news instead"
-        )
+except requests.exceptions.RequestException as e:
+    logger.error(f"Error fetching Yahoo Finance news: {str(e)}")
+    return f"Error fetching news: {str(e)}. Please try again later."
 ```
 
 ---
@@ -165,14 +162,13 @@ collaborators: []
 
 tools:
   - scrape_financial_news
-  - scrape_reuters_news
 ```
 
 **Critical Points:**
 - MUST include explicit ticker parameter instructions
 - Provide tool usage examples
 - This prevents circular behavior bugs
-- Tool names must match Python function names exactly
+- Tool name must match Python function name exactly
 
 ---
 
@@ -202,7 +198,7 @@ orchestrate tools import -k python \
   -f tools/yahoo_finance.py \
   -r requirements.txt
 
-# Import News Scraper tools
+# Import News Scraper tool
 orchestrate tools import -k python \
   -f tools/news_scraper_tool.py \
   -r requirements.txt
@@ -213,6 +209,7 @@ orchestrate tools import -k python \
 - This installs dependencies in cloud runtime
 - Wait for "Tool imported successfully" message
 - All commands run from "ID-Bob-WxO-Workshop/Lab 2 - Materials" directory
+- Only scrape_financial_news will be deployed (Yahoo Finance)
 
 #### Step 4.3: Import Agents
 ```bash
@@ -246,7 +243,6 @@ Tools:
 - get_formatted_stock_data
 - get_stock_comparison
 - scrape_financial_news
-- scrape_reuters_news
 ```
 
 ---
@@ -301,13 +297,14 @@ orchestrate tools import -k python \
 - Include tool usage examples
 - Agent must understand when to pass ticker parameter
 
-### Issue 3: Reuters 401/403 Errors
-**Symptom:** `Error fetching Reuters news: 401 Client Error`
+### Issue 3: Network Errors
+**Symptom:** `Error fetching news: Connection timeout` or similar network errors
 
 **Solution:**
-- This is expected - Reuters blocks programmatic access
-- Tool should return helpful error message
-- Suggest using Yahoo Finance news instead
+- Check internet connectivity
+- Retry the request
+- Yahoo Finance may be temporarily unavailable
+- Wait a few moments and try again
 
 ---
 
