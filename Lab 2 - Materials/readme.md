@@ -18,8 +18,8 @@ Lab 2 - Materials/
 │   └── tools/
 │       ├── yahoo_finance.py              # Stock data tools (provided)
 │       └── news_scraper_tool.py          # News scraping tools (to build)
-├── requirements.txt                       # Python dependencies
-├── BOB_INSTRUCTIONS.md                    # Detailed technical guide
+├── requirements.txt                      # Python dependencies
+├── BOB_INSTRUCTIONS.md                   # Detailed technical guide
 └── readme.md                             # This file
 ```
 
