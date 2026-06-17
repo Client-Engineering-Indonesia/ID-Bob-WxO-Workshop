@@ -72,6 +72,49 @@ graph TD
 - watsonx Orchestrate account (trial or subscription)
 - Internet access for API calls
 
+## Setup
+
+### Step 1: Configure Credentials
+
+Before starting the lab, you need to set up your watsonx Orchestrate credentials:
+
+1. **Copy the environment template:**
+   ```bash
+   cd "ID-Bob-WxO-Workshop/Lab 2 - Materials"
+   cp env.example .env
+   ```
+
+2. **Edit `.env` file and add your credentials:**
+   ```bash
+   WXO_API_KEY=your_actual_api_key_here
+   WXO_INSTANCE_URL=https://api.us-south.watson-orchestrate.cloud.ibm.com/instances/your_actual_instance_id
+   ```
+
+3. **Where to get your credentials:**
+   - **API Key**: Log in to watsonx Orchestrate → Settings → API Keys → Create new key
+   - **Instance URL**: watsonx Orchestrate → Settings → Instance Details → Copy instance URL
+
+### Step 2: Install Dependencies
+
+```bash
+# Install Python dependencies
+pip install -r requirements.txt
+```
+
+### Step 3: Configure watsonx Orchestrate CLI
+
+```bash
+# Add your environment
+orchestrate env add -n production \
+  -u https://api.us-south.watson-orchestrate.cloud.ibm.com/instances/YOUR_INSTANCE_ID \
+  -a
+
+# Activate the environment
+orchestrate env activate production
+```
+
+**Note:** The `.env` file approach ensures your credentials are ready for all deployment commands and prevents authentication errors during implementation.
+
 ## Usage Examples
 
 ### Stock Price Query
