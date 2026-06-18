@@ -1,171 +1,481 @@
-# Lab 2: watsonx.Orchestrate Financial Intelligence Agent System
-
-A multi-agent system for financial analysis built with IBM watsonx Orchestrate. Provides real-time stock market data and financial news sentiment analysis through specialized AI agents.
+# Lab 2: Building a watsonx Orchestrate Financial Intelligence Agent
 
 ## Overview
+This document provides instructions for creating a watsonx Orchestrate agent that scrapes financial news with sentiment analysis. Students will use an existing Yahoo Finance agent as a reference to build a News Scraper agent.
 
-This system demonstrates how to build and deploy AI agents using watsonx Orchestrate ADK. It consists of three specialized agents working together to provide comprehensive financial intelligence.
+---
 
-## Project Structure
+## Project Goal
+Build an AI agent on IBM watsonx Orchestrate that:
+1. Scrapes financial news from Yahoo Finance
+2. Performs VADER sentiment analysis
+3. Filters news by stock ticker
+4. Provides market sentiment insights
 
+---
+
+## Reference Agent Structure
+
+Students have access to `yahoo-finance-agent.yaml` as a reference. This agent demonstrates:
+- Proper YAML structure for watsonx Orchestrate
+- How to define agent behavior and instructions
+- Tool integration patterns
+- Error handling approaches
+
+**Key sections in the reference agent:**
+- `spec_version`: Always use `v1`
+- `kind`: Always use `native`
+- `name`: Unique agent identifier (snake_case)
+- `description`: Clear explanation of agent capabilities
+- `instructions`: Detailed behavior guidelines
+- `llm`: Model specification
+- `tools`: List of tool functions the agent can use
+
+---
+
+## Step-by-Step Build Instructions
+
+### Phase 1: Project Setup
+
+The project structure is already set up:
 ```
 Lab 2 - Materials/
 ├── agents/
-│   ├── yahoo-finance-agent.yaml          # Stock data agent (provided)
-│   └── news-scraper-agent.yaml           # News sentiment agent (to build)
+│   └── yahoo-finance-agent.yaml (reference)
 ├── tools/
-│   ├── yahoo_finance.py                  # Stock data tools (provided)
-│   └── news_scraper_tool.py              # News scraping tools (to build)
-├── requirements.txt                      # Python dependencies
-├── env.example                           # Environment configuration template
-├── BOB_INSTRUCTIONS.md                   # Detailed technical guide
-└── readme.md                             # This file
+│   └── yahoo_finance.py (reference)
+├── requirements.txt (dependencies)
+├── env.example (environment template)
+└── BOB_INSTRUCTIONS.md (this file)
 ```
 
-## Agent Architecture
+**Note:** `requirements.txt` already contains all necessary dependencies. Do NOT include `ibm-watsonx-orchestrate` - it causes conflicts in cloud runtime.
 
-```mermaid
-graph TD
-    User[User Query] --> FO[financial_orchestrator<br/>Main Coordinator]
+---
+
+### Phase 2: Build Python Tool
+
+#### Step 2.1: Create News Scraper Tool
+**File:** `tools/news_scraper_tool.py`
+
+**Key Requirements:**
+- Import: `from ibm_watsonx_orchestrate.agent_builder.tools import tool`
+- Use `@tool` decorator for the function
+- Function name: `scrape_financial_news`
+- Implement VADER sentiment analysis
+- Handle ticker filtering intelligently
+
+**Critical Implementation Details:**
+```python
+@tool
+def scrape_financial_news(ticker: str = "", max_articles: int = 10) -> str:
+    """
+    Scrape financial news with sentiment analysis.
     
-    FO -->|Stock price requests| YFA[yahoo_finance_agent<br/>Stock Data Specialist]
-    FO -->|News & sentiment requests| NSA[news_scraper_agent<br/>News Sentiment Specialist]
-    FO -->|Combined analysis| YFA
-    FO -->|Combined analysis| NSA
+    Args:
+        ticker: Optional ticker to filter (e.g., 'TSLA')
+        max_articles: Maximum articles to return
     
-    YFA -->|Uses| YFT[yahoo_finance.py<br/>• get_formatted_stock_data<br/>• get_stock_comparison]
-    NSA -->|Uses| NST[news_scraper_tool.py<br/>• scrape_financial_news<br/>]
-    
-    YFT -->|Fetches from| YAPI[Yahoo Finance API]
-    NST -->|Scrapes from| NEWS[News Sources<br/>Yahoo Finance News<br/>]
-    
-    YFA -->|Returns| FO
-    NSA -->|Returns| FO
-    FO -->|Synthesized response| User
-    
-    style FO fill:#e1f5ff,stroke:#01579b,stroke-width:3px
-    style YFA fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    style NSA fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    style YFT fill:#fff9c4,stroke:#f57f17
-    style NST fill:#fce4ec,stroke:#880e4f
+    Returns:
+        Formatted string with news and sentiment
+    """
+    # Implementation:
+    # 1. Scrape general Yahoo Finance news page
+    # 2. If ticker provided, filter articles mentioning it
+    # 3. Use VADER for sentiment analysis
+    # 4. Format with sentiment scores
+    # 5. Calculate overall sentiment distribution
 ```
 
-### Agents
+**CRITICAL: Yahoo Finance HTML Structure (Updated 2026)**
+Yahoo Finance frequently updates their HTML structure. As of June 2026, the correct approach is:
 
-1. **financial_orchestrator** - Main coordinator that intelligently routes requests to specialized agents
-2. **yahoo_finance_agent** - Retrieves real-time stock prices, historical trends, and market metrics
-3. **news_scraper_agent** - Scrapes financial news and performs sentiment analysis
+```python
+# Use general news page
+url = "https://finance.yahoo.com/news/"
 
-### Capabilities
+# Yahoo Finance now uses h3 tags for article titles
+h3_tags = soup.find_all('h3')
 
-- Real-time stock prices and market data
-- Historical trends and performance analysis
-- Multi-stock comparisons
-- Financial news aggregation from multiple sources
-- VADER sentiment analysis with confidence scores
-- Intelligent query routing and response synthesis
+for h3 in h3_tags:
+    # Extract title
+    title = h3.get_text(strip=True)
+    
+    # Skip short titles (navigation items)
+    if len(title) < 15:
+        continue
+    
+    # Extract link from parent anchor tag
+    parent_a = h3.find_parent('a')
+    if parent_a and parent_a.get('href'):
+        link = parent_a['href']
+        if not link.startswith('http'):
+            link = f"https://finance.yahoo.com{link}"
+```
 
-## Prerequisites
+**Critical Fix for Ticker-Specific News:**
+```python
+# Use general news page, not ticker-specific URLs
+url = "https://finance.yahoo.com/news/"
 
-- Python 3.11+
-- watsonx Orchestrate account (trial or subscription)
-- watsonx Orchestrate CLI installed
-- Internet access for API calls
+# Filter articles by ticker mention in title or summary
+if ticker:
+    ticker_upper = ticker.upper()
+    if ticker_upper not in title.upper() and ticker_upper not in summary_text.upper():
+        continue  # Skip non-relevant articles
+```
 
-### Verify Prerequisites
+**Error Handling:**
+```python
+except requests.exceptions.RequestException as e:
+    logger.error(f"Error fetching Yahoo Finance news: {str(e)}")
+    return f"Error fetching news: {str(e)}. Please try again later."
+```
 
-Before starting, verify your environment:
+---
 
+### Phase 3: Create Agent YAML Specification
+
+#### Step 3.1: Study the Reference Agent
+**File:** `yahoo-finance-agent.yaml` (provided)
+
+Review these key elements:
+1. **spec_version and kind**: Standard headers
+2. **name and description**: Clear identification
+3. **instructions section**: Detailed behavior guidelines including:
+   - Behavior and sources
+   - Reasoning and brevity controls
+   - Formatting rules
+   - Error handling
+   - Workflow steps
+4. **llm**: Model specification (`groq/openai/gpt-oss-120b`)
+5. **tools**: List of available functions
+
+#### Step 3.2: Create News Scraper Agent
+**File:** `agents/news-scraper-agent.yaml`
+
+**Task:** Create this file based on the reference `yahoo-finance-agent.yaml` structure.
+
+**Required elements:**
+```yaml
+spec_version: v1
+kind: native
+name: news_scraper_agent
+description: [Your description of news scraping capabilities]
+
+instructions: |
+  Behavior and sources:
+  - [Define how agent should behave]
+  
+  Reasoning and brevity controls:
+  - [Define response style]
+  
+  Error handling:
+  - [Define error responses]
+  
+  News analysis workflow:
+  1. [Step-by-step process]
+  2. IMPORTANT: When user asks for ticker-specific news:
+     - Call scrape_financial_news with ticker="TSLA"
+     - DO NOT call with empty ticker (ticker="")
+  
+  Tool usage examples:
+  - Ticker-specific: scrape_financial_news(ticker="TSLA", max_articles=10)
+  - General market: scrape_financial_news(ticker="", max_articles=10)
+
+llm: groq/openai/gpt-oss-120b
+style: default
+collaborators: []
+
+tools:
+  - scrape_financial_news
+```
+
+**Critical Points:**
+- MUST include explicit ticker parameter instructions
+- Provide tool usage examples
+- This prevents circular behavior bugs
+- Tool name must match Python function name exactly
+
+---
+
+### Phase 4: Deployment to watsonx Orchestrate
+
+#### Step 4.1: Setup Environment
 ```bash
-# Check Python version (should be 3.11+)
-python --version
+# Navigate to project directory
+cd "ID-Bob-WxO-Workshop/Lab 2 - Materials"
 
-# Check if orchestrate CLI is installed
-orchestrate --version
+# Set API key (if not already set)
+export WXO_API_KEY="your_api_key_here"
 
-# If orchestrate CLI is not installed, install it:
-pip install ibm-watsonx-orchestrate-cli
-```
-
-## Setup
-
-### Step 1: Configure Credentials
-
-Before starting the lab, you need to set up your watsonx Orchestrate credentials:
-
-1. **Copy the environment template:**
-   ```bash
-   cd "Lab 2 - Materials"
-   cp env.example .env
-   ```
-
-2. **Edit `.env` file and add your credentials:**
-   ```bash
-   WXO_API_KEY=your_actual_api_key_here
-   WXO_INSTANCE_URL=https://api.us-south.watson-orchestrate.cloud.ibm.com/instances/your_actual_instance_id
-   ```
-
-3. **Where to get your credentials:**
-   - **API Key**: Log in to watsonx Orchestrate → Settings → API Keys → Create new key
-   - **Instance URL**: watsonx Orchestrate → Settings → Instance Details → Copy instance URL
-
-### Step 2: Install Dependencies
-
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
-```
-
-### Step 3: Configure watsonx Orchestrate CLI
-
-```bash
-# Add your environment (use your actual instance URL)
+# Add environment (if not already added)
 orchestrate env add -n production \
   -u https://api.us-south.watson-orchestrate.cloud.ibm.com/instances/YOUR_INSTANCE_ID \
   -a
 
-# Activate the environment
+# Activate environment
+orchestrate env activate production
+```
+
+#### Step 4.2: Import Tools with Dependencies
+```bash
+# Import Yahoo Finance tools (reference - already done)
+orchestrate tools import -k python \
+  -f tools/yahoo_finance.py \
+  -r requirements.txt
+
+# Import News Scraper tool
+orchestrate tools import -k python \
+  -f tools/news_scraper_tool.py \
+  -r requirements.txt
+```
+
+**Critical Notes:**
+- MUST use `-r requirements.txt` flag
+- This installs dependencies in cloud runtime
+- Wait for "Tool imported successfully" message
+- All commands run from "ID-Bob-WxO-Workshop/Lab 2 - Materials" directory
+- Only scrape_financial_news will be deployed (Yahoo Finance)
+
+#### Step 4.3: Import Agents
+```bash
+# Import Yahoo Finance agent (reference - already done)
+orchestrate agents import -f agents/yahoo-finance-agent.yaml
+
+# Import News Scraper agent
+orchestrate agents import -f agents/news-scraper-agent.yaml
+```
+
+**Critical Notes:**
+- Wait for "Agent imported successfully" message
+- Verify agent name matches YAML specification
+- **Importing is NOT the same as deploying!**
+
+#### Step 4.4: Deploy Agents (CRITICAL STEP!)
+```bash
+# Deploy Yahoo Finance agent
+orchestrate agents deploy --name yahoo_finance_agent
+
+# Deploy News Scraper agent
+orchestrate agents deploy --name news_scraper_agent
+```
+
+**IMPORTANT:**
+- Agents must be DEPLOYED after import to be active
+- Import = uploads the configuration
+- Deploy = activates the agent for use
+- If you skip this step, agents won't work!
+
+#### Step 4.5: Verify Deployment
+```bash
+# List all agents
+orchestrate agents list
+
+# List all tools
+orchestrate tools list
+```
+
+**Expected Output:**
+```
+Agents:
+- yahoo_finance_agent
+- news_scraper_agent
+
+Tools:
+- get_formatted_stock_data
+- get_stock_comparison
+- scrape_financial_news
+```
+
+---
+
+### Phase 5: Testing & Validation
+
+#### Test Case 1: General Financial News
+**Query:** "Show me recent financial news sentiment"
+
+**Expected:**
+- Returns 8-10 articles
+- Includes sentiment scores and distribution
+- Shows overall market sentiment
+
+#### Test Case 2: Ticker-Specific News
+**Query:** "Get news and sentiment for Tesla stock"
+
+**Expected:**
+- Returns Tesla-filtered news articles
+- Includes sentiment analysis
+- MUST NOT return general news with empty ticker
+
+#### Test Case 3: Sentiment Analysis
+**Query:** "What's the market sentiment today?"
+
+**Expected:**
+- Overall sentiment summary
+- Distribution of positive/negative/neutral articles
+- Confidence scores
+
+---
+
+## Common Issues & Solutions
+
+### Issue 1: "No financial news found" Error
+**Symptom:** Tool returns "No financial news found. Please try again or use a different ticker."
+
+**Root Cause:** Yahoo Finance changed their HTML structure. The scraper is using outdated selectors.
+
+**Solution:**
+```bash
+# Step 1: Update the scraper to use h3 tags (see code example above)
+# Step 2: Re-import the tool with dependencies
+cd "Lab 2 - Materials"
+orchestrate tools import -k python \
+  -f tools/news_scraper_tool.py \
+  -r requirements.txt
+
+# Step 3: Re-import and deploy the agent
+orchestrate agents import -f agents/news-scraper-agent.yaml
+orchestrate agents deploy --name news_scraper_agent
+```
+
+**Prevention:** Web scraping is fragile. Always:
+- Use multiple fallback selectors
+- Test scraper regularly
+- Handle structure changes gracefully
+- Log what selectors are being tried
+
+### Issue 2: ModuleNotFoundError for bs4/vaderSentiment
+**Symptom:** `ModuleNotFoundError: No module named 'vaderSentiment'`
+
+**Solution:**
+```bash
+# Re-import tool with requirements file from Lab 2 - Materials directory
+cd "Lab 2 - Materials"
+orchestrate tools import -k python \
+  -f tools/news_scraper_tool.py \
+  -r requirements.txt
+```
+
+**Critical:** ALWAYS use `-r requirements.txt` flag when importing tools with dependencies.
+
+### Issue 3: Ticker-Specific News Returns General News
+**Symptom:** Agent calls `scrape_financial_news(ticker="")` instead of `ticker="TSLA"`
+
+**Solution:**
+- Add explicit instructions in news-scraper-agent.yaml
+- Include tool usage examples
+- Agent must understand when to pass ticker parameter
+
+### Issue 4: Network Errors
+**Symptom:** `Error fetching news: Connection timeout` or similar network errors
+
+**Solution:**
+- Check internet connectivity
+- Retry the request
+- Yahoo Finance may be temporarily unavailable
+- Wait a few moments and try again
+
+### Issue 5: Agent Deployed But Not Working
+**Symptom:** Agent is listed but doesn't respond correctly or tools fail
+
+**Root Cause:** Tools were not properly imported before agent deployment, or agent wasn't deployed after import.
+
+**Solution - Complete Redeployment:**
+```bash
+cd "Lab 2 - Materials"
+
+# Step 1: Import tools with dependencies
+orchestrate tools import -k python -f tools/news_scraper_tool.py -r requirements.txt
+orchestrate tools import -k python -f tools/yahoo_finance.py -r requirements.txt
+
+# Step 2: Import agents
+orchestrate agents import -f agents/news-scraper-agent.yaml
+orchestrate agents import -f agents/yahoo-finance-agent.yaml
+
+# Step 3: Deploy agents (CRITICAL - don't skip this!)
+orchestrate agents deploy --name news_scraper_agent
+orchestrate agents deploy --name yahoo_finance_agent
+
+# Step 4: Verify
+orchestrate agents list
+orchestrate tools list
+```
+
+**Remember:** The deployment sequence is:
+1. Import tools with `-r requirements.txt`
+2. Import agents
+3. Deploy agents (this activates them)
+
+---
+
+## Success Criteria
+
+Your implementation is complete when:
+
+1. Tool deployed to watsonx Orchestrate with dependencies
+2. Agent deployed successfully
+3. All 3 test cases passing
+4. Ticker-specific news filtering working correctly
+5. Error handling graceful for all failure modes
+6. Agent follows reference structure from yahoo-finance-agent.yaml
+
+---
+
+## Quick Start Command Sequence
+
+```bash
+# 1. Navigate to project
+cd "Lab 2 - Materials"
+
+# 2. Create News Scraper files
+# - tools/news_scraper_tool.py
+# - agents/news-scraper-agent.yaml
+
+# 3. Deploy (COMPLETE SEQUENCE)
+export WXO_API_KEY="your_key"
 orchestrate env activate production
 
-# Verify environment is active
-orchestrate env list
+# Import tools with dependencies
+orchestrate tools import -k python -f tools/news_scraper_tool.py -r requirements.txt
+
+# Import agent
+orchestrate agents import -f agents/news-scraper-agent.yaml
+
+# CRITICAL: Deploy agent to activate it
+orchestrate agents deploy --name news_scraper_agent
+
+# 4. Verify
+orchestrate agents list
+orchestrate tools list
 ```
 
-**Note:** The `.env` file approach ensures your credentials are ready for all deployment commands and prevents authentication errors during implementation.
+**Remember:** Import → Deploy → Verify (Don't skip the deploy step!)
 
-## Usage Examples
+---
 
-### Stock Price Query
-```
-"What's the current price of Apple stock?"
-```
+## Key Learnings & Best Practices
 
-### News Sentiment
-```
-"What's the market sentiment for tech stocks today?"
-```
+### 1. Tool Development
+- Always use `@tool` decorator from IBM ADK
+- Return formatted strings, not JSON objects
+- Handle edge cases (empty data, errors)
+- Provide helpful error messages
 
-### Combined Analysis
-```
-"Analyze Tesla: show me the stock price and recent news sentiment"
-```
+### 2. Agent Configuration
+- Study reference agent structure carefully
+- Keep instructions concise but explicit
+- Provide tool usage examples
+- Include error handling guidance
 
-### Multi-Stock Comparison
-```
-"Compare AAPL, GOOGL, and MSFT performance"
-```
+### 3. Deployment
+- Use requirements.txt (no IBM packages)
+- Import tools with `-r requirements.txt` flag for dependencies
+- All commands run from "ID-Bob-WxO-Workshop/Lab 2 - Materials" directory
+- Verify each step before proceeding
 
-## Testing
-
-Test agents in the watsonx Orchestrate UI:
-1. Log in to watsonx Orchestrate
-2. Navigate to Agent Builder
-3. Select `financial_orchestrator`
-4. Use the test chat interface
-
-## Documentation
-
-- **BOB_INSTRUCTIONS.md** - Detailed technical implementation guide
-- **env.example** - Environment configuration template
-
-For detailed technical instructions, troubleshooting, and best practices, refer to `BOB_INSTRUCTIONS.md`.
+### 4. Testing
+- Test with general queries first
+- Test ticker-specific filtering
+- Test error scenarios
+- Validate sentiment analysis output
