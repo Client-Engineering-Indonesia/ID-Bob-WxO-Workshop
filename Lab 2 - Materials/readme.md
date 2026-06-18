@@ -4,7 +4,7 @@ A multi-agent system for financial analysis built with IBM watsonx Orchestrate. 
 
 ## Overview
 
-This system demonstrates how to build and deploy AI agents using watsonx Orchestrate ADK. It consists of three specialized agents working together to provide comprehensive financial intelligence.
+This system demonstrates how to build and deploy AI agents using watsonx Orchestrate ADK. It consists of two specialized agents working together to provide comprehensive financial intelligence.
 
 ## Project Structure
 
