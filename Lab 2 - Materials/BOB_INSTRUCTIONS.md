@@ -87,14 +87,41 @@ def scrape_financial_news(ticker: str = "", max_articles: int = 10) -> str:
     # 5. Calculate overall sentiment distribution
 ```
 
+**CRITICAL: Yahoo Finance HTML Structure (Updated 2026)**
+Yahoo Finance frequently updates their HTML structure. As of June 2026, the correct approach is:
+
+```python
+# Use general news page
+url = "https://finance.yahoo.com/news/"
+
+# Yahoo Finance now uses h3 tags for article titles
+h3_tags = soup.find_all('h3')
+
+for h3 in h3_tags:
+    # Extract title
+    title = h3.get_text(strip=True)
+    
+    # Skip short titles (navigation items)
+    if len(title) < 15:
+        continue
+    
+    # Extract link from parent anchor tag
+    parent_a = h3.find_parent('a')
+    if parent_a and parent_a.get('href'):
+        link = parent_a['href']
+        if not link.startswith('http'):
+            link = f"https://finance.yahoo.com{link}"
+```
+
 **Critical Fix for Ticker-Specific News:**
 ```python
 # Use general news page, not ticker-specific URLs
 url = "https://finance.yahoo.com/news/"
 
-# Filter articles by ticker mention
-if ticker and ticker.upper() not in title.upper():
-    if ticker.upper() not in summary_text.upper():
+# Filter articles by ticker mention in title or summary
+if ticker:
+    ticker_upper = ticker.upper()
+    if ticker_upper not in title.upper() and ticker_upper not in summary_text.upper():
         continue  # Skip non-relevant articles
 ```
 
@@ -223,8 +250,24 @@ orchestrate agents import -f agents/news-scraper-agent.yaml
 **Critical Notes:**
 - Wait for "Agent imported successfully" message
 - Verify agent name matches YAML specification
+- **Importing is NOT the same as deploying!**
 
-#### Step 4.4: Verify Deployment
+#### Step 4.4: Deploy Agents (CRITICAL STEP!)
+```bash
+# Deploy Yahoo Finance agent
+orchestrate agents deploy --name yahoo_finance_agent
+
+# Deploy News Scraper agent
+orchestrate agents deploy --name news_scraper_agent
+```
+
+**IMPORTANT:**
+- Agents must be DEPLOYED after import to be active
+- Import = uploads the configuration
+- Deploy = activates the agent for use
+- If you skip this step, agents won't work!
+
+#### Step 4.5: Verify Deployment
 ```bash
 # List all agents
 orchestrate agents list
@@ -277,19 +320,46 @@ Tools:
 
 ## Common Issues & Solutions
 
-### Issue 1: ModuleNotFoundError for bs4/vaderSentiment
+### Issue 1: "No financial news found" Error
+**Symptom:** Tool returns "No financial news found. Please try again or use a different ticker."
+
+**Root Cause:** Yahoo Finance changed their HTML structure. The scraper is using outdated selectors.
+
+**Solution:**
+```bash
+# Step 1: Update the scraper to use h3 tags (see code example above)
+# Step 2: Re-import the tool with dependencies
+cd "Lab 2 - Materials"
+orchestrate tools import -k python \
+  -f tools/news_scraper_tool.py \
+  -r requirements.txt
+
+# Step 3: Re-import and deploy the agent
+orchestrate agents import -f agents/news-scraper-agent.yaml
+orchestrate agents deploy --name news_scraper_agent
+```
+
+**Prevention:** Web scraping is fragile. Always:
+- Use multiple fallback selectors
+- Test scraper regularly
+- Handle structure changes gracefully
+- Log what selectors are being tried
+
+### Issue 2: ModuleNotFoundError for bs4/vaderSentiment
 **Symptom:** `ModuleNotFoundError: No module named 'vaderSentiment'`
 
 **Solution:**
 ```bash
 # Re-import tool with requirements file from Lab 2 - Materials directory
-cd "ID-Bob-WxO-Workshop/Lab 2 - Materials"
+cd "Lab 2 - Materials"
 orchestrate tools import -k python \
   -f tools/news_scraper_tool.py \
   -r requirements.txt
 ```
 
-### Issue 2: Ticker-Specific News Returns General News
+**Critical:** ALWAYS use `-r requirements.txt` flag when importing tools with dependencies.
+
+### Issue 3: Ticker-Specific News Returns General News
 **Symptom:** Agent calls `scrape_financial_news(ticker="")` instead of `ticker="TSLA"`
 
 **Solution:**
@@ -297,7 +367,7 @@ orchestrate tools import -k python \
 - Include tool usage examples
 - Agent must understand when to pass ticker parameter
 
-### Issue 3: Network Errors
+### Issue 4: Network Errors
 **Symptom:** `Error fetching news: Connection timeout` or similar network errors
 
 **Solution:**
@@ -305,6 +375,37 @@ orchestrate tools import -k python \
 - Retry the request
 - Yahoo Finance may be temporarily unavailable
 - Wait a few moments and try again
+
+### Issue 5: Agent Deployed But Not Working
+**Symptom:** Agent is listed but doesn't respond correctly or tools fail
+
+**Root Cause:** Tools were not properly imported before agent deployment, or agent wasn't deployed after import.
+
+**Solution - Complete Redeployment:**
+```bash
+cd "Lab 2 - Materials"
+
+# Step 1: Import tools with dependencies
+orchestrate tools import -k python -f tools/news_scraper_tool.py -r requirements.txt
+orchestrate tools import -k python -f tools/yahoo_finance.py -r requirements.txt
+
+# Step 2: Import agents
+orchestrate agents import -f agents/news-scraper-agent.yaml
+orchestrate agents import -f agents/yahoo-finance-agent.yaml
+
+# Step 3: Deploy agents (CRITICAL - don't skip this!)
+orchestrate agents deploy --name news_scraper_agent
+orchestrate agents deploy --name yahoo_finance_agent
+
+# Step 4: Verify
+orchestrate agents list
+orchestrate tools list
+```
+
+**Remember:** The deployment sequence is:
+1. Import tools with `-r requirements.txt`
+2. Import agents
+3. Deploy agents (this activates them)
 
 ---
 
@@ -325,22 +426,31 @@ Your implementation is complete when:
 
 ```bash
 # 1. Navigate to project
-cd "ID-Bob-WxO-Workshop/Lab 2 - Materials"
+cd "Lab 2 - Materials"
 
 # 2. Create News Scraper files
 # - tools/news_scraper_tool.py
 # - agents/news-scraper-agent.yaml
 
-# 3. Deploy
+# 3. Deploy (COMPLETE SEQUENCE)
 export WXO_API_KEY="your_key"
 orchestrate env activate production
+
+# Import tools with dependencies
 orchestrate tools import -k python -f tools/news_scraper_tool.py -r requirements.txt
+
+# Import agent
 orchestrate agents import -f agents/news-scraper-agent.yaml
+
+# CRITICAL: Deploy agent to activate it
+orchestrate agents deploy --name news_scraper_agent
 
 # 4. Verify
 orchestrate agents list
 orchestrate tools list
 ```
+
+**Remember:** Import → Deploy → Verify (Don't skip the deploy step!)
 
 ---
 
